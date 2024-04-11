@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   BItcoinExchange.hpp                                :+:      :+:    :+:   */
+/*   BitcoinExchange.hpp                                :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: dabalm <dabalm@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/11 02:43:04 by dabalm            #+#    #+#             */
-/*   Updated: 2024/04/11 03:13:29 by dabalm           ###   ########.fr       */
+/*   Updated: 2024/04/11 20:11:24 by dabalm           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,16 +14,18 @@
 
 #include <iostream>
 #include <string>
-#include <vector>
 #include <map>
 #include <algorithm>
 #include <fstream>
+#include <limits>
+#include <exception>
+#include <ctime>
+#include <iomanip>
 
 class BitcoinExchange
 {
 private:
-    std::map<std::string, double> _rates;
-    std::map<std::string, double> _volumes;
+    std::map<time_t, float> _rates;
 
 public:
     BitcoinExchange();
@@ -33,7 +35,7 @@ public:
 
     void addData(std::string csvFile);
 
-    void printConversionToEuro(std::string from, double amount);
+    void printConversionToEuro(std::string from, float amount);
 
     class InvalidFileException : public std::exception
     {

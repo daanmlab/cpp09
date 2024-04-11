@@ -6,7 +6,7 @@
 /*   By: dabalm <dabalm@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/11 02:52:30 by dabalm            #+#    #+#             */
-/*   Updated: 2024/04/11 03:19:45 by dabalm           ###   ########.fr       */
+/*   Updated: 2024/04/11 20:42:20 by dabalm           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,72 +34,67 @@ BitcoinExchange::~BitcoinExchange()
 {
 }
 
-std::vector<std::string> split(std::string str, char delimiter)
+static std::pair<std::string, std::string> split(std::string str, char delimiter)
 {
-    std::vector<std::string> result;
-    std::string token;
-    size_t pos = 0;
-    while ((pos = str.find(delimiter)) != std::string::npos)
-    {
-        token = str.substr(0, pos);
-        result.push_back(token);
-        str.erase(0, pos + 1);
-    }
-    result.push_back(str);
+    std::pair<std::string, std::string> result;
+    
+    size_t pos = str.find(delimiter);
+
+    result.first = str.substr(0, pos);
+    result.second = str.substr(pos + 1);
+    
     return result;
+}
+
+time_t convertStringToTime(std::string date)
+{
+    struct tm tm;
+    tm.tm_hour = 0;
+    tm.tm_min = 0;
+    tm.tm_sec = 0;
+    tm.tm_isdst = -1;
+    
+    strptime(date.c_str(), "%Y-%m-%d", &tm);
+    time_t t = mktime(&tm);
+    return t;
 }
 
 void BitcoinExchange::addData(std::string csvFile)
 {
-    std::ifstream file(csvFile);
+    std::ifstream file(csvFile.c_str());
     if (!file.is_open())
         throw InvalidFileException();
     std::string line;
     std::getline(file, line);
     while (std::getline(file, line))
     {
-        std::vector<std::string> data = split(line, ',');
-        if (data.size() != 2)
-            throw InvalidFileException();
-        std::cout << data[0] << " " << data[1] << std::endl;
-        _rates[data[0]] = std::stod(data[1]);
+        std::pair<std::string, std::string> data = split(line, ',');
+        _rates[convertStringToTime(data.first)] = std::atof(data.second.c_str());
     }
     file.close();
 }
 
-void BitcoinExchange::printConversionToEuro(std::string from, double amount)
+std::map<time_t, float>::iterator findByDate(std::map<time_t, float> rates, time_t date)
 {
-    if (_rates.find(from) == _rates.end())
+    std::map<time_t, float>::iterator it = rates.find(date);
+    if (it == rates.end())
     {
-        // Find the closest date
-        std::string closestDate;
-        double closestRate = 0.0;
-        double minDifference = std::numeric_limits<double>::max();
-        std::string closestRateDate; // Updated variable name
-
-        for (std::map<std::string, double>::const_iterator it = _rates.begin(); it != _rates.end(); ++it)
+        for (it = rates.begin(); it != rates.end(); it++)
         {
-            double difference = std::abs(std::stod(it->first) - std::stod(from));
-            if (difference < minDifference)
+            if (it->first > date)
             {
-                minDifference = difference;
-                closestRateDate = it->first; // Updated variable assignment
-                closestRate = it->second;
+                it--;
+                break;
             }
         }
+    }
+    return it;
+}
 
-        std::cout << "Closest date: " << closestRateDate << std::endl; // Updated variable name
-        std::cout << amount << " BTC on " << from << " = " << amount * closestRate << " EUR" << std::endl;
-    }
-    else
-    {
-        std::cout << amount << " BTC on " << from << " = " << amount * _rates[from] << " EUR" << std::endl;
-    }
-    if (_rates.find(from) == _rates.end())
-        std::cout << "Currency not found" << std::endl;
-    else
-        std::cout << amount << " BTC"
-                  << " on " << from << " = " << amount * _rates[from] << " EUR" << std::endl;
+void BitcoinExchange::printConversionToEuro(std::string from, float amount)
+{
+    std::map<time_t, float>::iterator it = findByDate(_rates, convertStringToTime(from));
+    std::cout << (float)amount << " BTC on " << gmtime(&it->first)->tm_year + 1900 << "-" << gmtime(&it->first)->tm_mon + 1 << "-" << gmtime(&it->first)->tm_mday << " is worth " << (float)(amount * it->second) << " EUR" << std::endl;
 }
 
 const char *BitcoinExchange::InvalidFileException::what() const throw()
